@@ -4,6 +4,6 @@ import { checkout } from "../controllers/checkout.controller.js";
 
 const router = Router();
 
-router.post("/", auth, checkout);
+router.post("/:cartId", auth, checkout);
 
 export default router;

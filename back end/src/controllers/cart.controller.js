@@ -1,26 +1,23 @@
 import Cart from "../models/cart.model.js";
 import Product from "../models/product.model.js";
 
-// Add To Cart (+1)
 export const addToCart = async (req, res) => {
   try {
     const { productId } = req.params;
 
-    // Check Product
     const product = await Product.findById(productId);
 
     if (!product) {
       return res.status(404).json({
+        status: "fail",
         message: "Product Not Found",
       });
     }
 
-    // Find Cart
     let cart = await Cart.findOne({
       user: req.user._id,
     });
 
-    // Create Cart
     if (!cart) {
       cart = await Cart.create({
         user: req.user._id,
@@ -28,20 +25,19 @@ export const addToCart = async (req, res) => {
       });
     }
 
-    // Search Product
     const productIndex = cart.products.findIndex(
-      (item) => item.product.toString() === productId
+      (item) => item.product.toString() === productId,
     );
 
     if (productIndex > -1) {
-      // Check Stock
       if (cart.products[productIndex].quantity >= product.stock) {
         return res.status(400).json({
+          status: "fail",
           message: "Not Enough Stock",
         });
       }
 
-      cart.products[productIndex].quantity++;
+      cart.products[productIndex].quantity += 1;
     } else {
       cart.products.push({
         product: productId,
@@ -52,17 +48,17 @@ export const addToCart = async (req, res) => {
     await cart.save();
 
     res.status(200).json({
-      message: "Product Added To Cart",
-      cart,
+      status: "success",
+      message: "Product Added Successfully",
     });
   } catch (error) {
     res.status(500).json({
+      status: "error",
       message: error.message,
     });
   }
 };
 
-// Get Cart
 export const getCart = async (req, res) => {
   try {
     const cart = await Cart.findOne({
@@ -70,24 +66,39 @@ export const getCart = async (req, res) => {
     }).populate("products.product");
 
     if (!cart) {
-      return res.status(404).json({
-        message: "Cart Is Empty",
+      return res.status(200).json({
+        status: "success",
+        data: {
+          _id: null,
+          products: [],
+          totalCartPrice: 0,
+        },
       });
     }
 
+    let totalCartPrice = 0;
+
+    cart.products.forEach((item) => {
+      totalCartPrice += item.product.price * item.quantity;
+    });
+
     res.status(200).json({
-      message: "Cart Retrieved Successfully",
-      cart,
+      status: "success",
+      data: {
+        _id: cart._id,
+        products: cart.products,
+        totalCartPrice,
+      },
     });
   } catch (error) {
     res.status(500).json({
+      status: "error",
       message: error.message,
     });
   }
 };
 
-// Increase Quantity (+1)
-export const increaseQuantity = async (req, res) => {
+export const updateCartQuantity = async (req, res) => {
   try {
     const { productId } = req.params;
 
@@ -97,16 +108,18 @@ export const increaseQuantity = async (req, res) => {
 
     if (!cart) {
       return res.status(404).json({
+        status: "fail",
         message: "Cart Not Found",
       });
     }
 
     const item = cart.products.find(
-      (item) => item.product.toString() === productId
+      (item) => item.product.toString() === productId,
     );
 
     if (!item) {
       return res.status(404).json({
+        status: "fail",
         message: "Product Not Found In Cart",
       });
     }
@@ -115,6 +128,7 @@ export const increaseQuantity = async (req, res) => {
 
     if (item.quantity >= product.stock) {
       return res.status(400).json({
+        status: "fail",
         message: "Not Enough Stock",
       });
     }
@@ -124,63 +138,17 @@ export const increaseQuantity = async (req, res) => {
     await cart.save();
 
     res.status(200).json({
-      message: "Quantity Increased",
-      cart,
+      status: "success",
+      message: "Quantity Updated Successfully",
     });
   } catch (error) {
     res.status(500).json({
+      status: "error",
       message: error.message,
     });
   }
 };
 
-// Decrease Quantity (-1)
-export const decreaseQuantity = async (req, res) => {
-  try {
-    const { productId } = req.params;
-
-    const cart = await Cart.findOne({
-      user: req.user._id,
-    });
-
-    if (!cart) {
-      return res.status(404).json({
-        message: "Cart Not Found",
-      });
-    }
-
-    const item = cart.products.find(
-      (item) => item.product.toString() === productId
-    );
-
-    if (!item) {
-      return res.status(404).json({
-        message: "Product Not Found In Cart",
-      });
-    }
-
-    if (item.quantity > 1) {
-      item.quantity--;
-    } else {
-      cart.products = cart.products.filter(
-        (item) => item.product.toString() !== productId
-      );
-    }
-
-    await cart.save();
-
-    res.status(200).json({
-      message: "Quantity Decreased",
-      cart,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
-  }
-};
-
-// Remove Product
 export const removeFromCart = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -191,22 +159,53 @@ export const removeFromCart = async (req, res) => {
 
     if (!cart) {
       return res.status(404).json({
+        status: "fail",
         message: "Cart Not Found",
       });
     }
 
     cart.products = cart.products.filter(
-      (item) => item.product.toString() !== productId
+      (item) => item.product.toString() !== productId,
     );
 
     await cart.save();
 
     res.status(200).json({
+      status: "success",
       message: "Product Removed Successfully",
-      cart,
     });
   } catch (error) {
     res.status(500).json({
+      status: "error",
+      message: error.message,
+    });
+  }
+};
+
+export const clearCart = async (req, res) => {
+  try {
+    const cart = await Cart.findOne({
+      user: req.user._id,
+    });
+
+    if (!cart) {
+      return res.status(404).json({
+        status: "fail",
+        message: "Cart Not Found",
+      });
+    }
+
+    cart.products = [];
+
+    await cart.save();
+
+    res.status(200).json({
+      status: "success",
+      message: "Cart Cleared Successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
       message: error.message,
     });
   }

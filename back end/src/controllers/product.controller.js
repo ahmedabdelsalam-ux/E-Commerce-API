@@ -1,9 +1,10 @@
 import Product from "../models/product.model.js";
+import slugify from "slugify";
 
 // Get All Products
 export const getAllProducts = async (req, res) => {
   try {
-    const products = await Product.find();
+    const products = await Product.find().populate("category");
 
     res.status(200).json({
       message: "Products Retrieved Successfully",
@@ -21,7 +22,7 @@ export const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const product = await Product.findById(id);
+    const product = await Product.findById(id).populate("category");
 
     if (!product) {
       return res.status(404).json({
@@ -40,25 +41,46 @@ export const getProductById = async (req, res) => {
   }
 };
 
-
-
-
+// Create Product
 export const createProduct = async (req, res) => {
   try {
-    const { title, description, price, stock, image, category } = req.body;
-
-    const product = await Product.create({
+    const {
       title,
       description,
       price,
       stock,
-      image,
+      imageCover,
       category,
+      ratingsAverage,
+    } = req.body;
+
+    const isExist = await Product.findOne({ title });
+
+    if (isExist) {
+      return res.status(409).json({
+        message: "Product Already Exists",
+      });
+    }
+
+    const product = await Product.create({
+      title,
+      slug: slugify(title, {
+        lower: true,
+        strict: true,
+      }),
+      description,
+      price,
+      stock,
+      imageCover,
+      category, // Category ID
+      ratingsAverage,
     });
+
+    const newProduct = await Product.findById(product._id).populate("category");
 
     res.status(201).json({
       message: "Product Created Successfully",
-      product,
+      product: newProduct,
     });
   } catch (error) {
     res.status(500).json({
@@ -67,11 +89,7 @@ export const createProduct = async (req, res) => {
   }
 };
 
-
-
-
-
-
+// Update Product
 export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
@@ -84,14 +102,17 @@ export const updateProduct = async (req, res) => {
       });
     }
 
-    const updatedProduct = await Product.findByIdAndUpdate(
-      id,
-      req.body,
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
+    if (req.body.title) {
+      req.body.slug = slugify(req.body.title, {
+        lower: true,
+        strict: true,
+      });
+    }
+
+    const updatedProduct = await Product.findByIdAndUpdate(id, req.body, {
+      new: true,
+      runValidators: true,
+    }).populate("category");
 
     res.status(200).json({
       message: "Product Updated Successfully",
@@ -104,10 +125,7 @@ export const updateProduct = async (req, res) => {
   }
 };
 
-
-
-
-
+// Delete Product
 export const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;

@@ -4,26 +4,21 @@ import auth from "../middleware/auth.middleware.js";
 import {
   addToCart,
   getCart,
-  increaseQuantity,
-  decreaseQuantity,
+  updateCartQuantity,
   removeFromCart,
+  clearCart,
 } from "../controllers/cart.controller.js";
 
 const router = Router();
 
-// Add Product (لو مش موجود يضيفه، ولو موجود يزود +1)
-router.post("/:productId", auth, addToCart);
-
-// Get Cart
 router.get("/", auth, getCart);
 
-// Increase Quantity
-router.patch("/:productId/increase", auth, increaseQuantity);
+router.post("/:productId", auth, addToCart);
 
-// Decrease Quantity
-router.patch("/:productId/decrease", auth, decreaseQuantity);
+router.patch("/:productId", auth, updateCartQuantity);
 
-// Remove Product Completely
 router.delete("/:productId", auth, removeFromCart);
+
+router.delete("/", auth, clearCart);
 
 export default router;

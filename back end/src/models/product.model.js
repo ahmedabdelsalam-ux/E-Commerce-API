@@ -8,6 +8,14 @@ const productSchema = new mongoose.Schema(
       trim: true,
     },
 
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+
     description: {
       type: String,
       required: true,
@@ -26,15 +34,22 @@ const productSchema = new mongoose.Schema(
       min: 0,
     },
 
-    image: {
+    imageCover: {
       type: String,
-      default: "",
+      required: true,
     },
 
     category: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
       required: true,
-      trim: true,
+    },
+
+    ratingsAverage: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
     },
   },
   {
